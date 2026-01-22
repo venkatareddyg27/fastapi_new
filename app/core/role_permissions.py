@@ -4,7 +4,7 @@ from app.core.permissions import (
     USER_UPDATE,
     USER_DELETE,
 )
-
+ALLOWED_ROLES = {"user", "admin", "superadmin"}
 ROLE_PERMISSIONS = {
     "user": [
         USER_CREATE,

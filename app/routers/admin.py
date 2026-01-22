@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from app.core.role_permissions import ROLE_PERMISSIONS, ALLOWED_ROLES
 from app.database.models import User
 from app.database.dependencies import get_db
 from app.schemas.users import UserCreate, UserResponse
@@ -72,3 +73,30 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(user)
     db.commit()
     return {"message": "User deleted"}
+
+# 🔁 CHANGE USER ROLE (admin / superadmin)
+@router.patch(
+    "/{user_id}/role",
+    response_model=UserResponse,
+    dependencies=[Depends(permission_required(USER_UPDATE))]
+)
+def change_user_role(
+    user_id: int,
+    role: str,
+    db: Session = Depends(get_db)
+):
+    # Validate role
+    if role not in ALLOWED_ROLES:
+        raise HTTPException(status_code=400, detail="Invalid role")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Update role + permissions
+    user.role = role
+    user.permissions = ",".join(ROLE_PERMISSIONS.get(role, []))
+
+    db.commit()
+    db.refresh(user)
+    return user
